@@ -53,9 +53,11 @@ module MediaWiki
     # Throws MediaWiki::Unauthorized if login fails
     def login(username, password, domain = 'local')
       form_data = {'action' => 'login', 'lgname' => username, 'lgpassword' => password, 'lgdomain' => domain}
-      make_api_request(form_data)
+      # jrkw - adding in credential_cookies as a return from make_api_request so we can use the auth'd cookies elsehwhere
+      credential_cookies = make_api_request(form_data)
       @password = password
       @username = username
+      credential_cookies
     end
 
     # Fetch MediaWiki page in MediaWiki format.  Does not follow redirects.
@@ -770,6 +772,8 @@ module MediaWiki
             when "NeedToken" then make_api_request(form_data.merge('lgtoken' => doc.elements["login"].attributes["token"]))
             else raise Unauthorized.new "Login failed: " + login_result
           end
+          # jrkw - returning cookies if this is a login request so they can be used elsewhere
+          return @cookies
         end
         continue = (continue_xpath and doc.elements['query-continue']) ? REXML::XPath.first(doc, continue_xpath).value : nil
         return [doc, continue]
